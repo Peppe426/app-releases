@@ -47,7 +47,7 @@ def update_feed(tag):
     digest = re.fullmatch(r"sha256:([0-9a-f]{64})", asset.get("digest") or "")
     if not digest or asset["size"] <= 0:
         raise ValueError("GitHub must report a SHA-256 digest and a positive size for the installer.")
-    manifest = {"version": version, "sha256": digest[1], "size": asset["size"]}
+    manifest = {"version": version, "asset": asset["name"], "sha256": digest[1], "size": asset["size"]}
     path = f"contents/products/{product}/windows-x64.json"
 
     # Two releases can finish out of order. Re-read the version on a conflicting write.
@@ -69,6 +69,8 @@ def update_feed(tag):
                 return
             if current["version"] == version:
                 raise ValueError("The installer changed for an existing version. Publish a new version.")
+            if current["asset"] != asset["name"]:
+                raise ValueError(f"Keep the published installer filename {current['asset']!r} for this product.")
             change["sha"] = entry["sha"]
         try:
             github(path, change)
