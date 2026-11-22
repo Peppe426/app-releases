@@ -39,10 +39,11 @@ def update_feed(tag):
     if not match:
         raise ValueError("Use a product tag such as journeydeck-v1.3.0.")
     product, version = match.groups()
-    name = f"{product}-setup-win-x64.exe"
-    assets = [a for a in release["assets"] if a["name"].lower() == name and a["state"] == "uploaded"]
+    stem = f"{product}-setup-win-x64"
+    names = {stem + ".exe", stem + ".msix"}
+    assets = [a for a in release["assets"] if a["name"].lower() in names and a["state"] == "uploaded"]
     if len(assets) != 1:
-        raise ValueError(f"Expected one uploaded {name} installer.")
+        raise ValueError(f"Expected exactly one uploaded {stem}.exe or {stem}.msix installer.")
     asset = assets[0]
     digest = re.fullmatch(r"sha256:([0-9a-f]{64})", asset.get("digest") or "")
     if not digest or asset["size"] <= 0:
