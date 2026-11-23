@@ -9,6 +9,12 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
+ANDROID_ASSETS = {
+    "hemloop": "Hemloop-Android.apk",
+    "meetinghand": "MeetingHand-Android.apk",
+}
+
+
 def github(path, payload=None):
     request = Request(
         f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/{path}",
@@ -43,7 +49,7 @@ def update_feed(tag):
     names = {stem + ".exe", stem + ".msix"}
     uploaded = [a for a in release["assets"] if a["state"] == "uploaded"]
     windows = [a for a in uploaded if a["name"].lower() in names]
-    android = [a for a in uploaded if product == "meetinghand" and a["name"] == "MeetingHand-Android.apk"]
+    android = [a for a in uploaded if a["name"] == ANDROID_ASSETS.get(product)]
     if len(windows) > 1 or len(android) > 1:
         raise ValueError("Publish one installer per platform.")
     if not windows and not android:
