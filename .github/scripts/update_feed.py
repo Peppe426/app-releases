@@ -1,4 +1,4 @@
-"""Advance one product's Windows feed after its stable installer is published."""
+"""Advance each platform feed that has an installer in a stable release."""
 
 import base64
 import json
@@ -41,21 +41,31 @@ def update_feed(tag):
     product, version = match.groups()
     stem = f"{product}-setup-win-x64"
     names = {stem + ".exe", stem + ".msix"}
-    assets = [a for a in release["assets"] if a["name"].lower() in names and a["state"] == "uploaded"]
-    if len(assets) != 1:
-        raise ValueError(f"Expected exactly one uploaded {stem}.exe or {stem}.msix installer.")
-    asset = assets[0]
+    uploaded = [a for a in release["assets"] if a["state"] == "uploaded"]
+    windows = [a for a in uploaded if a["name"].lower() in names]
+    android = [a for a in uploaded if product == "meetinghand" and a["name"] == "MeetingHand-Android.apk"]
+    if len(windows) > 1 or len(android) > 1:
+        raise ValueError("Publish one installer per platform.")
+    if not windows and not android:
+        raise ValueError(f"No supported installer was uploaded for {product}.")
+    if windows:
+        publish_asset(product, version, "windows-x64", windows[0])
+    if android:
+        publish_asset(product, version, "android", android[0])
+
+
+def publish_asset(product, version, platform, asset):
     digest = re.fullmatch(r"sha256:([0-9a-f]{64})", asset.get("digest") or "")
     if not digest or asset["size"] <= 0:
         raise ValueError("GitHub must report a SHA-256 digest and a positive size for the installer.")
     manifest = {"version": version, "asset": asset["name"], "sha256": digest[1], "size": asset["size"]}
-    path = f"contents/products/{product}/windows-x64.json"
+    path = f"contents/products/{product}/{platform}.json"
 
     # Two releases can finish out of order. Re-read the version on a conflicting write.
     for attempt in range(3):
         change = {
             "branch": "main",
-            "message": f"release({product}): publish Windows x64 {version}",
+            "message": f"release({product}): publish {platform} {version}",
             "content": base64.b64encode((json.dumps(manifest, indent=2) + "\n").encode()).decode(),
         }
         try:
@@ -66,7 +76,7 @@ def update_feed(tag):
         else:
             current = json.loads(base64.b64decode(entry["content"]))
             if version_tuple(current["version"]) > version_tuple(version) or current == manifest:
-                print(f"{product} already advertises {current['version']}.")
+                print(f"{product} {platform} already advertises {current['version']}.")
                 return
             if current["version"] == version:
                 raise ValueError("The installer changed for an existing version. Publish a new version.")
@@ -75,7 +85,7 @@ def update_feed(tag):
             change["sha"] = entry["sha"]
         try:
             github(path, change)
-            print(f"{product} now advertises Windows x64 {version}.")
+            print(f"{product} now advertises {platform} {version}.")
             return
         except HTTPError as error:
             if error.code not in (409, 422) or attempt == 2:
