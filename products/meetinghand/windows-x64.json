@@ -1,6 +1,6 @@
 {
-  "version": "1.8.3",
+  "version": "1.8.4",
   "asset": "MeetingHand-Setup-win-x64.msix",
-  "sha256": "652787c6e11b39a64898137f441f08a40a769939e7b13f7ea0078021bf3b8216",
-  "size": 158750156
+  "sha256": "be1b3f806a59c558ae2c8a8c46173622d12192a39bc1a0d0b305aa3c6b50de51",
+  "size": 158750260
 }
